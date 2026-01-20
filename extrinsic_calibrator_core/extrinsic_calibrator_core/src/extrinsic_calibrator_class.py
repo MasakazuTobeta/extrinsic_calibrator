@@ -60,6 +60,7 @@ from rclpy.node import Node
 from sensor_msgs.msg import CameraInfo, Image
 import tf2_ros
 import tf_transformations
+from rclpy.qos import qos_profile_sensor_data
 
 # Custom parameters
 from extrinsic_calibrator_core.python_aruco_parameters import aruco_params
@@ -689,7 +690,7 @@ class Camera():
         self.marker_length = aruco_params.marker_length  # length of the marker side in meters (adjust as needed)
 
         # Subscribe to the camera image topic and camera info
-        self.image_sub = self.node.create_subscription(Image, image_topic, self.image_callback, 1)
+        self.image_sub = self.node.create_subscription(Image, image_topic, self.image_callback, qos_profile_sensor_data)
         self.camera_info_sub = self.node.create_subscription(CameraInfo, camera_info_topic, self.camera_info_callback, 1)
         self.cv2_image_publisher = self.node.create_publisher(Image, f"{image_topic}/detected_markers", 10)
         
