@@ -519,6 +519,10 @@ class ExtrinsicCalibrator(Node):
                     break
                 else:
                     self.map_to_cameras_transform_table[camera.camera_id] = None
+            if self.map_to_cameras_transform_table[camera.camera_id] is None:
+                self.get_logger().warn(
+                    f"Camera {camera.camera_name} has no path to the world marker (Marker {self.world_marker_id})."
+                )
         
         return True
 
@@ -538,7 +542,10 @@ class ExtrinsicCalibrator(Node):
                 camera_to_world_transform = np.dot(camera_to_marker_transform,marker_to_world_transform)
 
                 array_of_camera_to_world_transforms.append(camera_to_world_transform)
-                
+        
+        if not array_of_camera_to_world_transforms:
+            return None
+
         stacked_transform = np.hstack(array_of_camera_to_world_transforms)
         # Calculate the number of 4x4 blocks in stacked_transform
         num_blocks = stacked_transform.shape[1] // 4
