@@ -191,12 +191,14 @@ class ExtrinsicCalibrator(Node):
                     self.get_logger().warn(f"Marker {marker_id} is only seen by one camera (Camera {camera.camera_name})")
                             
         # Check if specifically marker 0 is seen by any camera
-        if not any(self.is_marker_visible_from_camera_table[0][camera.camera_id] for camera in self.array_of_cameras):
-            self.get_logger().error(f"Marker 0 is not seen by any camera")
-            return False
-        
-        else:
-            return True
+        self.marker_zero_visible = any(
+            self.is_marker_visible_from_camera_table[0][camera.camera_id]
+            for camera in self.array_of_cameras
+        )
+        if not self.marker_zero_visible:
+            self.get_logger().warn("Marker 0 is not seen by any camera. Falling back to a different world marker.")
+
+        return True
         
         
     def find_central_marker(self):
@@ -237,6 +239,12 @@ class ExtrinsicCalibrator(Node):
         # Check which marker has better punctuation by checking the maximum value of the table and returning its indices
         self.center_marker = self.find_random_max_index(self.scores_table)
         self.get_logger().info(f"Our central marker is Marker {self.center_marker}")
+
+        if self.marker_zero_visible:
+            self.world_marker_id = 0
+        else:
+            self.world_marker_id = self.center_marker
+            self.get_logger().warn(f"Using Marker {self.world_marker_id} as the world reference.")
         
         return True
         
@@ -520,10 +528,10 @@ class ExtrinsicCalibrator(Node):
         array_of_camera_to_world_transforms = []
         for marker_id in range(self.largest_marker + 1):
             if self.is_marker_visible_from_camera_table[marker_id][camera_id]:
-                if marker_id == 0:
+                if marker_id == self.world_marker_id:
                     marker_to_world_transform = np.eye(4)
-                elif self.does_transform_exist_between_markers_table[marker_id][0]:
-                    marker_to_world_transform = self.reliable_transform_between_markers_table[marker_id][0]
+                elif self.does_transform_exist_between_markers_table[marker_id][self.world_marker_id]:
+                    marker_to_world_transform = self.reliable_transform_between_markers_table[marker_id][self.world_marker_id]
                 else:
                     continue
                 camera_to_marker_transform = self.camera_to_marker_transform_table[marker_id][camera_id]
@@ -547,13 +555,13 @@ class ExtrinsicCalibrator(Node):
         # Create an array of transforms to be broadcasted
         transforms = []
         
-        # Broadcast the transform between "marker_0" and "map"
+        # Broadcast the transform between the world marker and "map"
         origin_transform = np.eye(4)
 
         t = TransformStamped()
             
         t.header.stamp = self.get_clock().now().to_msg()
-        t.header.frame_id = "marker_0"
+        t.header.frame_id = f"marker_{self.world_marker_id}"
         t.child_frame_id = "map"
         
         translation = tf_transformations.translation_from_matrix(origin_transform)
