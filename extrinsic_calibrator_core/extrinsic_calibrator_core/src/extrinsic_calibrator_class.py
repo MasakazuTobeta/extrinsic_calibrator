@@ -693,6 +693,11 @@ class Camera():
         # Define Aruco marker properties
         self.aruco_dict = aruco_params.aruco_dict
         self.parameters = cv2.aruco.DetectorParameters()
+        # Use subpixel corner refinement for more stable pose estimation.
+        self.parameters.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
+        self.parameters.cornerRefinementWinSize = 5
+        self.parameters.cornerRefinementMaxIterations = 30
+        self.parameters.cornerRefinementMinAccuracy = 0.1
         self.detector = cv2.aruco.ArucoDetector(self.aruco_dict, self.parameters)
         self.marker_length = aruco_params.marker_length  # length of the marker side in meters (adjust as needed)
 
